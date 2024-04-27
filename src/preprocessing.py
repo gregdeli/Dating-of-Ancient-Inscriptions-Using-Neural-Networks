@@ -1,6 +1,6 @@
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.model_selection import train_test_split, KFold
+from sklearn.model_selection import train_test_split
 
 
 def preprocess_data(path_to_dataset, max_features):
@@ -25,13 +25,9 @@ def preprocess_data(path_to_dataset, max_features):
             dates.at[index, col] = (dates.at[index, col] - minimum_date) / (
                 maximum_date - minimum_date
             )
+    dates = dates.to_numpy()
 
-    # Split data into training and validation sets (80/20)
-    X_train, X_val, y_train, y_val = train_test_split(
-        text_features, dates, test_size=0.2, random_state=42
-    )
-
-    return X_train, X_val, y_train, y_val
+    return text_features, dates
 
 
 if __name__ == "__main__":
