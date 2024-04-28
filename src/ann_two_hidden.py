@@ -11,9 +11,10 @@ import argparse
 
 def build_model(hidden_layer_neurons):
     model = Sequential()
-    model.add(
-        Dense(hidden_layer_neurons, input_dim=1000, activation="relu")
-    )  # Hidden layer
+    # First Hidden layer
+    model.add(Dense(hidden_layer_neurons, input_dim=1000, activation="relu"))
+    # Second Hidden layer
+    model.add(Dense((hidden_layer_neurons * 2), activation="relu"))
     model.add(Dense(1, activation="linear"))  # Output layer
     model.compile(
         loss=my_loss_function,
@@ -47,12 +48,11 @@ def plot_results(history, fold_no):
     plt.figure()
     plt.plot(epochs, rmse, "y", label="Training RMSE")
     plt.plot(epochs, val_rmse, "r", label="Validation RMSE")
-    plt.title("Training and validation RMSE")
+    plt.title("Training and validation RMSE, Two hidden layers")
     plt.xlabel("Epochs")
     plt.ylabel("RMSE")
     plt.legend()
-    plt.savefig(f"Plots/train_val_rmse_{fold_no}.png")
-    # plt.show()
+    plt.savefig(f"Plots/Two Hidden Layers/train_val_rmse_{fold_no}.png")
 
 
 if __name__ == "__main__":
@@ -89,4 +89,4 @@ if __name__ == "__main__":
         fold_no += 1
 
     # Calculate and print the average RMSE
-    print(f"\nAverage RMSE: {sum(rmse_per_fold) / len(rmse_per_fold)}")
+    print(f"\nAverage Validation RMSE: {sum(rmse_per_fold) / len(rmse_per_fold)}")

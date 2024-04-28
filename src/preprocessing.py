@@ -31,6 +31,4 @@ def preprocess_data(path_to_dataset, max_features):
 
 
 if __name__ == "__main__":
-    X_train, X_val, y_train, y_val = preprocess_data(
-        "Dataset/iphi2802.csv", max_features=1000
-    )
+    X, Y = preprocess_data("Dataset/iphi2802.csv", max_features=1000)
