@@ -16,7 +16,7 @@ def build_model(hidden_layer_neurons):
     # Second Hidden layer
     model.add(Dense((hidden_layer_neurons * 2), activation="relu"))
     # Third Hidden layer
-    model.add(Dense((hidden_layer_neurons * 3), activation="relu"))
+    model.add(Dense((hidden_layer_neurons * 4), activation="relu"))
     model.add(Dense(1, activation="linear"))  # Output layer
     model.compile(
         loss=my_loss_function,

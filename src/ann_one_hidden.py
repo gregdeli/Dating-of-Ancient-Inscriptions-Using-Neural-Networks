@@ -2,6 +2,7 @@ import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Activation, Dropout
 from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.callbacks import EarlyStopping
 from sklearn.model_selection import KFold
 from matplotlib import pyplot as plt
 
@@ -56,8 +57,9 @@ def plot_results(history, fold_no):
 
 if __name__ == "__main__":
     # Δημιουργούμε ένα parser για να εισάγουμε τον αριθμό των νευρώνων του κρυφού επιπέδου στο cli
-    parser = argparse.ArgumentParser(description="Neurons in the hidden layer")
+    parser = argparse.ArgumentParser(description="Train the neural network")
     parser.add_argument("--neurons", type=int, required=True)
+    parser.add_argument("--early_stopping", type=bool, default=False)
     args = parser.parse_args()
 
     X, Y = preprocessing.preprocess_data("Dataset/iphi2802.csv", max_features=1000)
@@ -76,9 +78,32 @@ if __name__ == "__main__":
 
         # Create a model for each fold
         model = build_model(hidden_layer_neurons=args.neurons)
-        history = model.fit(
-            train_X, train_Y, verbose=1, epochs=10, validation_data=(test_X, test_Y)
-        )
+        # Optional Early stopping
+        if args.early_stopping:
+            monitor = EarlyStopping(
+                monitor="val_RootMeanSquaredError",
+                patience=5,
+                verbose=1,
+                restore_best_weights=True,
+            )
+            # Train the model
+            history = model.fit(
+                train_X,
+                train_Y,
+                verbose=1,
+                epochs=40,
+                validation_data=(test_X, test_Y),
+                callbacks=[monitor],
+            )
+        else:
+            # Train the model
+            history = model.fit(
+                train_X,
+                train_Y,
+                verbose=1,
+                epochs=40,
+                validation_data=(test_X, test_Y),
+            )
 
         loss, rmse = model.evaluate(test_X, test_Y, verbose=1)
         rmse_per_fold.append(rmse)
