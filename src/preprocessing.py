@@ -24,7 +24,12 @@ def preprocess_data(path_to_dataset, max_features):
             dates.at[index, col] = (dates.at[index, col] - minimum_date) / (
                 maximum_date - minimum_date
             )
+
+    text_features = text_features.toarray()
     dates = dates.to_numpy()
+
+    # dates_mean = dates.mean(axis=1)  # Μέσος όρος του κάθε έυρους ημερομηνιών
+    # dates_mean = dates_mean.to_numpy()
 
     return text_features, dates
 
