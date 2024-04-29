@@ -4,7 +4,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 
 def preprocess_data(path_to_dataset, max_features):
     # Open the dataset
-    df = pd.read_csv("Dataset/iphi2802.csv", delimiter="\t")
+    df = pd.read_csv(path_to_dataset, delimiter="\t")
 
     # Create dataframes with the input (text col) and output data (date_min, date_max cols)
     texts = df["text"]

@@ -1,34 +1,42 @@
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Activation, Dropout
+from tensorflow.keras.layers import Dense, Dropout
 from tensorflow.keras.optimizers import Adam, SGD
+from tensorflow.keras.metrics import RootMeanSquaredError
 from tensorflow.keras.callbacks import EarlyStopping
 from sklearn.model_selection import KFold
 from matplotlib import pyplot as plt
+import numpy as np
 
 import preprocessing
 import argparse
 
 
-def build_model(hidden_layer_neurons, learning_rate, momentum):
+def build_model(
+    hidden_layer_no, hidden_layer_neurons, learning_rate, momentum, r_in, r_h
+):
     model = Sequential()
-    model.add(
-        Dense(hidden_layer_neurons, input_dim=1000, activation="relu")
-    )  # Hidden layer
+    if r_in != 0:
+        model.add(Dropout(r_in, input_shape=(1000,)))  # Input Dropout layer
+    # First hidden layer
+    model.add(Dense(hidden_layer_neurons, input_dim=1000, activation="relu"))
+    if r_h != 0:
+        model.add(Dropout(r_h))  # Hidden Dropout layer
+    if hidden_layer_no >= 2:
+        # Second hidden layer
+        model.add(Dense(int(hidden_layer_neurons), activation="relu"))
+    if hidden_layer_no == 3:
+        # Third hidden layer
+        model.add(Dense(int(hidden_layer_neurons * 4), activation="relu"))
     model.add(Dense(1, activation="linear"))  # Output layer
     model.compile(
-        # loss=my_loss_function,
-        loss="mean_absolute_error",
-        # optimizer=Adam(learning_rate=learning_rate, beta1=momentum),
-        optimizer=SGD(learning_rate=learning_rate, momentum=momentum),
-        metrics=["RootMeanSquaredError"],
+        loss=my_loss_function,
+        optimizer=Adam(learning_rate=learning_rate, beta_1=momentum),
     )
     model.summary()
     return model
 
 
-"""
-#Old loss function
 def my_loss_function(y_true, y_pred):
     # every y value is of the form: y = [date_min, date_max]
     y_date_min, y_date_max = tf.unstack(y_true, axis=-1)
@@ -43,31 +51,35 @@ def my_loss_function(y_true, y_pred):
     loss = tf.where(
         (y_pred >= y_date_min) & (y_pred <= y_date_max), zero_loss, min_distance
     )
-    return loss"""
+    return loss
 
 
-def plot_results(history, fold_no):
-    rmse = history.history["RootMeanSquaredError"]
-    val_rmse = history.history["val_RootMeanSquaredError"]
-    epochs = range(1, len(rmse) + 1)
+def plot_results(history, fold_no, hidden_layer_no):
+    loss = history.history["loss"]
+    val_loss = history.history["val_loss"]
+    epochs = range(1, len(loss) + 1)
     plt.figure()
-    plt.plot(epochs, rmse, "y", label="Training RMSE")
-    plt.plot(epochs, val_rmse, "r", label="Validation RMSE")
-    plt.title("Training and validation RMSE, One hidden layer")
+    plt.plot(epochs, loss, "y", label="Training loss")
+    plt.plot(epochs, val_loss, "r", label="Validation loss")
+    plt.title(
+        f"Training and Validation Loss, {hidden_layer_no} hidden layers, Fold {fold_no}"
+    )
     plt.xlabel("Epochs")
-    plt.ylabel("RMSE")
+    plt.ylabel("Loss")
     plt.legend()
-    plt.savefig(f"Plots/Single Hidden Layer/train_val_rmse_{fold_no}.png")
+    plt.savefig(f"Plots/train_val_loss_fold_{fold_no}.png")
 
 
 if __name__ == "__main__":
-    # Δημιουργούμε έναν parser για να εισάγουμε μέσω του cli τον αριθμό των νευρώνων του κρυφού επιπέδου,
-    # τον ρυθμό εκπαίδευσης και την σταθερά ορμής του μοντέλου
-    parser = argparse.ArgumentParser(description="Train the neural network")
+    # Δημιουργούμε έναν parser για να εισάγουμε μέσω του cli τις απαραίτητες παραμέτρους του δικτύου
+    parser = argparse.ArgumentParser(description="Train an test the neural network")
+    parser.add_argument("--hidden_layer_no", type=int, default=1)
     parser.add_argument("--neurons", type=int, required=True)
-    parser.add_argument("--early_stopping", type=bool, default=False)
+    parser.add_argument("--early_stopping", action="store_true")
     parser.add_argument("--learning_rate", type=float, default=0.001)
     parser.add_argument("--momentum", type=float, default=0.2)
+    parser.add_argument("--r_in", type=float, default=0)
+    parser.add_argument("--r_h", type=float, default=0)
 
     args = parser.parse_args()
 
@@ -83,19 +95,23 @@ if __name__ == "__main__":
         train_X = X[train]
         test_X = X[test]
         train_Y = Y[train]
-        test_Y = Y[test]
+        test_Y_mean = np.mean(Y[test], axis=1)  # Μέσος όρος του κάθε έυρους ημερομηνιών
+        test_Y_min_max = Y[test]
 
         # Create a model for each fold
         model = build_model(
+            hidden_layer_no=args.hidden_layer_no,
             hidden_layer_neurons=args.neurons,
             learning_rate=args.learning_rate,
             momentum=args.momentum,
+            r_in=args.r_in,
+            r_h=args.r_h,
         )
         # Optional Early stopping
         if args.early_stopping:
             monitor = EarlyStopping(
-                monitor="val_RootMeanSquaredError",
-                patience=1,
+                monitor="val_loss",
+                patience=5,
                 verbose=1,
                 restore_best_weights=True,
             )
@@ -104,8 +120,8 @@ if __name__ == "__main__":
                 train_X,
                 train_Y,
                 verbose=1,
-                epochs=160,
-                validation_data=(test_X, test_Y),
+                epochs=100,
+                validation_data=(test_X, test_Y_min_max),
                 callbacks=[monitor],
             )
         else:
@@ -114,17 +130,15 @@ if __name__ == "__main__":
                 train_X,
                 train_Y,
                 verbose=1,
-                epochs=500,
-                validation_data=(test_X, test_Y),
+                epochs=40,
+                validation_data=(test_X, test_Y_min_max),
             )
 
-        # loss, rmse = model.evaluate(test_X, test_Y, verbose=1)
-        rmse = history.history["val_RootMeanSquaredError"]
-        average_val_rmse = sum(rmse) / len(rmse)
-        print(f"Average Validation RMSE for fold {fold_no}: {average_val_rmse}")
-        rmse_per_fold.append(average_val_rmse)
+        rmse_metric = RootMeanSquaredError()
+        rmse = rmse_metric(test_Y_mean, model.predict(test_X))
+        rmse_per_fold.append(rmse)
 
-        plot_results(history, fold_no)
+        plot_results(history, fold_no, hidden_layer_no=args.hidden_layer_no)
 
         fold_no += 1
 
