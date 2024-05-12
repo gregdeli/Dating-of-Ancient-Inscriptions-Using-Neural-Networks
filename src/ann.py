@@ -24,10 +24,10 @@ def build_model(
         model.add(Dropout(r_h))  # Hidden Dropout layer
     if hidden_layer_no >= 2:
         # Second hidden layer
-        model.add(Dense(int(hidden_layer_neurons), activation="relu"))
+        model.add(Dense(int(hidden_layer_neurons / 2), activation="relu"))
     if hidden_layer_no == 3:
         # Third hidden layer
-        model.add(Dense(int(hidden_layer_neurons * 4), activation="relu"))
+        model.add(Dense(int(hidden_layer_neurons / 4), activation="relu"))
     model.add(Dense(1, activation="linear"))  # Output layer
     model.compile(
         loss=my_loss_function,
